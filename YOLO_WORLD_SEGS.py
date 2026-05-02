@@ -137,7 +137,7 @@ def inference_bbox(yolo_world_model, categories, iou_threshold, with_class_agnos
     yolo_world_model.set_classes(categories)
 
     results = yolo_world_model.infer(img, confidence=confidence)
-    detections = sv.Detections.from_inference(results)
+    detections = detections_from_inference(results)
     detections = detections.with_nms(class_agnostic=with_class_agnostic_nms, threshold=iou_threshold)
 
     bboxes = detections.xyxy
@@ -175,7 +175,7 @@ def inference_segm(yolo_world_model, esam_model, categories, iou_threshold, with
     img = np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8)
     yolo_world_model.set_classes(categories)
     results = yolo_world_model.infer(img, confidence=confidence)
-    detections = sv.Detections.from_inference(results)
+    detections = detections_from_inference(results)
     detections = detections.with_nms(class_agnostic=with_class_agnostic_nms, threshold=iou_threshold)
     segms = inference_with_boxes(
         image=img,

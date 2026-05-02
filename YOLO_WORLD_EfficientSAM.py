@@ -23,6 +23,38 @@ folder_paths.folder_names_and_paths["yolo_world"] = ([os.path.join(folder_paths.
 def process_categories(categories: str) -> List[str]:
     return [category.strip() for category in categories.split(',')]
 
+def detections_from_inference(results) -> sv.Detections:
+    if hasattr(sv.Detections, "from_inference"):
+        return sv.Detections.from_inference(results)
+
+    predictions = getattr(results, "predictions", [])
+    xyxy = []
+    confidence = []
+    class_id = []
+
+    for prediction in predictions:
+        if hasattr(prediction, "dict"):
+            prediction = prediction.dict(by_alias=True)
+
+        x = prediction["x"]
+        y = prediction["y"]
+        width = prediction["width"]
+        height = prediction["height"]
+        xyxy.append([
+            x - width / 2,
+            y - height / 2,
+            x + width / 2,
+            y + height / 2,
+        ])
+        confidence.append(prediction.get("confidence", 0.0))
+        class_id.append(prediction.get("class_id", 0))
+
+    return sv.Detections(
+        xyxy=np.array(xyxy, dtype=np.float32).reshape(-1, 4),
+        confidence=np.array(confidence, dtype=np.float32),
+        class_id=np.array(class_id, dtype=int),
+    )
+
 def annotate_image(
     input_image: np.ndarray,
     detections: sv.Detections,
@@ -138,7 +170,7 @@ class Yoloworld_ESAM_Zho:
             YOLO_WORLD_MODEL = yolo_world_model
             YOLO_WORLD_MODEL.set_classes(categories)
             results = YOLO_WORLD_MODEL.infer(img, confidence=confidence_threshold)
-            detections = sv.Detections.from_inference(results)
+            detections = detections_from_inference(results)
             detections = detections.with_nms(
                 class_agnostic=with_class_agnostic_nms,
                 threshold=iou_threshold
